@@ -59,19 +59,23 @@ class DontErrorAction(argparse.Action):
 
 def parse_command(command, message):
     parser = ThrowingArgumentParser(add_help=False, prog="@{}".format(username))
-    parser.add_argument("--help", "-h", default=argparse.SUPPRESS, action=DontErrorAction, nargs=0, help=argparse.SUPPRESS)
+    parser.add_argument("--help", "-h", default=False, action=DontErrorAction, nargs=0, help=argparse.SUPPRESS)
     parser.set_defaults(function=None)
+    impersonate_parent_parser = argparse.ArgumentParser(add_help=False)
+    impersonate_parent_parser.add_argument("user", default=None, help="Highlight of the user you want me to impersonate, or everyone to impersonate a mix of all users.")
+    impersonate_parent_parser.add_argument("--help", "-h", default=False, nargs=0, action=DontErrorAction, help=argparse.SUPPRESS)
+    impersonate_parent_parser.set_defaults(function="impersonate")
+
     subparsers = parser.add_subparsers()
-    impersonate_subparser = subparsers.add_parser("impersonate", description="Impersonate the given user", add_help=False)
-    impersonate_subparser.set_defaults(function="impersonate")
-    impersonate_subparser.add_argument("user", default=None, help="Highlight of the user you want me to impersonate, or everyone to impersonate a mix of all users.")
-    impersonate_subparser.add_argument("--help", "-h", default=argparse.SUPPRESS, nargs=0, action=DontErrorAction, help=argparse.SUPPRESS)
+    impersonate_subparser = subparsers.add_parser("impersonate", parents=[impersonate_parent_parser], description="Impersonate the given user", add_help=False)
+    do_subparser = subparsers.add_parser("do", parents=[impersonate_parent_parser], description="Impersonate the given user", add_help=False)
+    spoof_subparser = subparsers.add_parser("spoof", parents=[impersonate_parent_parser], description="Impersonate the given user", add_help=False)
 
 
     write_subparser = subparsers.add_parser("write", description="Write from a saved text", add_help=False)
     write_subparser.set_defaults(function="write")
     write_subparser.add_argument("name", default=[], nargs="+", help="Name of the text you want me to write like.")
-    write_subparser.add_argument("--help", "-h", default=argparse.SUPPRESS, action=DontErrorAction, nargs=0, help=argparse.SUPPRESS)
+    write_subparser.add_argument("--help", "-h", default=False, action=DontErrorAction, nargs=0, help=argparse.SUPPRESS)
 
     try:
         args, other_args = parser.parse_known_args(command)
@@ -114,7 +118,6 @@ def parse_command(command, message):
                 sentence = "I do not know how to write {}".format(" ".join(args.name))
             return sentence
         else:
-            print "here"
             raise ArgumentParserError("Unkown command")
     except ArgumentParserError as e:
         print e
