@@ -10,6 +10,8 @@ import sys
 STATE_SIZE = 2
 USER_ID_REGEX = r"\<\@(.+?)\>"
 
+global username
+
 projectname = "andrey3000"
 
 if os.name != "posix":
@@ -34,8 +36,10 @@ class ArgumentParserError(Exception):
     pass
 
 class ThrowingArgumentParser(argparse.ArgumentParser):
+    not_error = False
     def error(self, message):
-        raise ArgumentParserError(message)
+        if not self.not_error:
+            raise ArgumentParserError(message)
 
 def get_markov(user_id, path=chains_dir):
     try:
@@ -48,23 +52,36 @@ def save_markov(user_id, markov, path=chains_dir):
     with open(os.path.join(path, user_id), "w") as outfile:
         outfile.write(markov.to_json())
 
+class DontErrorAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        parser.not_error = True
+        setattr(namespace, self.dest, True)
 
 def parse_command(command, message):
-    parser = ThrowingArgumentParser()
+    parser = ThrowingArgumentParser(add_help=False, prog="@{}".format(username))
+    parser.add_argument("--help", "-h", default=argparse.SUPPRESS, action=DontErrorAction, nargs=0, help=argparse.SUPPRESS)
+    parser.set_defaults(function=None)
     subparsers = parser.add_subparsers()
-    impersonate_subparser = subparsers.add_parser("impersonate", description="Impersonate the given user")
+    impersonate_subparser = subparsers.add_parser("impersonate", description="Impersonate the given user", add_help=False)
     impersonate_subparser.set_defaults(function="impersonate")
-    impersonate_subparser.add_argument("user", default=None)
+    impersonate_subparser.add_argument("user", default=None, help="Highlight of the user you want me to impersonate, or everyone to impersonate a mix of all users.")
+    impersonate_subparser.add_argument("--help", "-h", default=argparse.SUPPRESS, nargs=0, action=DontErrorAction, help=argparse.SUPPRESS)
 
 
-    write_subparser = subparsers.add_parser("write", description="Write from a saved text")
+    write_subparser = subparsers.add_parser("write", description="Write from a saved text", add_help=False)
     write_subparser.set_defaults(function="write")
-    write_subparser.add_argument("name", default=[], nargs="+")
+    write_subparser.add_argument("name", default=[], nargs="+", help="Name of the text you want me to write like.")
+    write_subparser.add_argument("--help", "-h", default=argparse.SUPPRESS, action=DontErrorAction, nargs=0, help=argparse.SUPPRESS)
 
     try:
         args, other_args = parser.parse_known_args(command)
 
-        if args.function == "impersonate":
+        if args.function is None and args.help:
+            return parser.format_help()
+
+        elif args.function == "impersonate":
+            if args.help:
+                return impersonate_subparser.format_help()
             if args.user is None:
                 return "Who should I impersonate?"
             if args.user.lower() == "me":
@@ -85,6 +102,8 @@ def parse_command(command, message):
                 sentence = "Could not impersonate <@{}>, not enough data".format(uid)
             return sentence
         elif args.function == "write":
+            if args.help:
+                return write_subparser.format_help()
             name = "_".join(args.name).lower()
             markov = get_markov(name, path=texts_dir)
             try:
@@ -95,13 +114,17 @@ def parse_command(command, message):
                 sentence = "I do not know how to write {}".format(" ".join(args.name))
             return sentence
         else:
+            print "here"
             raise ArgumentParserError("Unkown command")
     except ArgumentParserError as e:
+        print e
         return "Unknown command"
 
 def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
+
+    global username
 
     parser = argparse.ArgumentParser()
     parser.set_defaults(function=None)
