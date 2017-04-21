@@ -60,6 +60,8 @@ def parse_command(command, message):
                 return "Who should I impersonate?"
             if args.user.lower() == "me":
                 uid = message.get("user")
+            elif args.user in ("<!everyone>", "everyone"):
+                uid = "everyone"
             else:
                 m = re.match(USER_ID_REGEX, args.user)
                 if not m:
@@ -129,11 +131,17 @@ def main(argv=None):
                 if text is None:
                     continue
                 if not text.startswith("<@{}>".format(user_id)):
+                    if slack_message.get("user") == user_id:
+                        continue
                     try:
                         chain = markovify.Text(str(text), state_size=STATE_SIZE)
                         old_chain = get_markov(slack_message.get("user"))
                         new_chain = markovify.combine([old_chain, chain])
                         save_markov(slack_message.get("user"), new_chain)
+
+                        old_chain = get_markov("everyone")
+                        new_chain = markovify.combine([old_chain, chain])
+                        save_markov("everyone", new_chain)
                     except Exception as e:
                         print e
                         print text
