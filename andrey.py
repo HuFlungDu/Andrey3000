@@ -126,6 +126,8 @@ def main(argv=None):
         for slack_message in client.rtm_read():
             if slack_message.get("type") == "message":
                 text = slack_message.get("text")
+                if text is None:
+                    continue
                 if not text.startswith("<@{}>".format(user_id)):
                     try:
                         chain = markovify.Text(str(text), state_size=STATE_SIZE)
