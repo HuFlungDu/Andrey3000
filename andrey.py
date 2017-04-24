@@ -5,6 +5,7 @@ import time
 import argparse
 import re
 import sys
+import json
 
 
 STATE_SIZE = 2
@@ -44,9 +45,9 @@ class ThrowingArgumentParser(argparse.ArgumentParser):
 def get_markov(user_id, path=chains_dir):
     try:
         with open(os.path.join(path, user_id), "r") as infile:
-            return markovify.Text.from_json(infile.read())
+            return AndreyText.from_json(infile.read())
     except:
-        return markovify.Text("", state_size=STATE_SIZE)
+        return AndreyText("", state_size=STATE_SIZE)
 
 def save_markov(user_id, markov, path=chains_dir):
     with open(os.path.join(path, user_id), "w") as outfile:
@@ -56,6 +57,13 @@ class DontErrorAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         parser.not_error = True
         setattr(namespace, self.dest, True)
+
+class AndreyText(markovify.Text):
+    def test_sentence_input(self, sentence):
+        return True
+
+    def to_json(self):
+        return json.dumps(self.to_dict(), ensure_ascii=False)
 
 def parse_command(command, message):
     parser = ThrowingArgumentParser(add_help=False, prog="@{}".format(username))
@@ -195,7 +203,7 @@ def main(argv=None):
                         if slack_message.get("user") == user_id:
                             continue
                         try:
-                            chain = markovify.Text(str(text), state_size=STATE_SIZE)
+                            chain = AndreyText(str(text), state_size=STATE_SIZE)
                             old_chain = get_markov(slack_message.get("user"))
                             new_chain = markovify.combine([old_chain, chain])
                             save_markov(slack_message.get("user"), new_chain)
@@ -215,7 +223,7 @@ def main(argv=None):
     elif args.function == "add_text":
         with open(args.text_file, "r") as infile:
             data = infile.read()
-        m = markovify.Text(data)
+        m = AndreyText(data)
         name = "_".join(args.name.split(" ")).lower()
         save_markov(name, m, path=texts_dir)
 
