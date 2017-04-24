@@ -66,13 +66,13 @@ def parse_command(command, message):
     impersonate_parent_parser.add_argument("--help", "-h", default=False, nargs=0, action=DontErrorAction, help=argparse.SUPPRESS)
     impersonate_parent_parser.set_defaults(function="impersonate")
 
-    subparsers = parser.add_subparsers()
-    impersonate_subparser = subparsers.add_parser("impersonate", parents=[impersonate_parent_parser], description="Impersonate the given user", add_help=False)
+    subparsers = parser.add_subparsers(metavar="{impersonate,write}")
+    impersonate_subparser = subparsers.add_parser("impersonate", parents=[impersonate_parent_parser], description="Impersonate the given user", add_help=False, help="Impersonate a user")
     do_subparser = subparsers.add_parser("do", parents=[impersonate_parent_parser], description="Impersonate the given user", add_help=False)
     spoof_subparser = subparsers.add_parser("spoof", parents=[impersonate_parent_parser], description="Impersonate the given user", add_help=False)
 
 
-    write_subparser = subparsers.add_parser("write", description="Write from a saved text", add_help=False)
+    write_subparser = subparsers.add_parser("write", description="Write from a saved text", add_help=False, help="Write in the style of a given text")
     write_subparser.set_defaults(function="write")
     write_subparser.add_argument("name", default=[], nargs="+", help="Name of the text you want me to write like.")
     write_subparser.add_argument("--help", "-h", default=False, action=DontErrorAction, nargs=0, help=argparse.SUPPRESS)
